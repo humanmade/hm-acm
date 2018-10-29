@@ -494,12 +494,12 @@ function get_aws_sdk() {
 	}
 
 	$params = [
-		'region'	 => 'us-east-1',
-		'version'	=> 'latest',
+		'region'  => 'us-east-1',
+		'version' => 'latest',
 	];
 
 	$params['credentials'] = [
-		'key'		=> HM_ACM_AWS_KEY,
+		'key'    => HM_ACM_AWS_KEY,
 		'secret' => HM_ACM_AWS_SECRET,
 	];
 	$sdk = new \Aws\Sdk( $params );

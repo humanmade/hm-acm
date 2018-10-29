@@ -110,7 +110,7 @@ function on_update_cloudfront_distribution_config() {
 }
 
 function on_unlink_cloudfront_distribution() {
-	check_admin_referer( 'hm-acm-unlink-cloudfront-sitribution' );
+	check_admin_referer( 'hm-acm-unlink-cloudfront-distribution' );
 	wp_safe_redirect( add_query_arg( 'page', 'hm-acm', admin_url( 'tools.php' ) ) );
 	unlink_cloudfront_distribution();
 	exit;
@@ -120,19 +120,21 @@ function admin_page() {
 	?>
 	<div class="wrap">
 		<h1><?php _e( 'HTTPS Certificate', 'hm-acm' ) ?></h1>
-		<?php if ( has_certificate() ) :
+		<?php if ( has_certificate() ) : ?>
+			<?php
 			$certificate = get_certificate();
 			?>
-			<h4>HTTPS Certificate: <?php echo esc_html( implode( ', ', $certificate['SubjectAlternativeNames'] ) ) ?> (<?php echo esc_html( $certificate['Status'] ) ?>)</h4>
-			<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( 'hm-acm-action', 'unlink-certificate' ), 'hm-acm-unlink-certificate' ) ) ?>" class="button button-secondary">Unlink</a>
+			<h4><?php printf( esc_html__( 'HTTPS Certificate: %1$s (%2$s)', 'hm-acm' ), implode( ', ', $certificate['SubjectAlternativeNames'] ),  $certificate['Status'] ) ?></h4>
+			<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( 'hm-acm-action', 'unlink-certificate' ), 'hm-acm-unlink-certificate' ) ) ?>" class="button button-secondary"><?php esc_html_e( 'Unlink', 'hm-acm' ) ?></a>
 		<?php endif ?>
-		<?php if ( has_cloudfront_distribution() ) :
+		<?php if ( has_cloudfront_distribution() ) : ?>
+			<?php
 			$distribution = get_cloudfront_distribution();
 			?>
-			<h4>CDN Distribution: <?php echo esc_html( $distribution['Id'] ) ?></h4>
-			<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( 'hm-acm-action', 'unlink-cloudfront-distribution' ), 'hm-acm-unlink-cloudfront-distribution' ) ) ?>" class="button button-secondary">Unlink</a>
+			<h4><?php printf( esc_html__( 'CDN Distribution: %s', 'hm-acm' ), $distribution['Id'] ) ?></h4>
+			<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( 'hm-acm-action', 'unlink-cloudfront-distribution' ), 'hm-acm-unlink-cloudfront-distribution' ) ) ?>" class="button button-secondary"><?php esc_html_e( 'Unlink', 'hm-acm' ) ?></a>
 			<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( 'hm-acm-action', 'update-cloudfront-distribution-config' ), 'hm-acm-update-cloudfront-distribution-config' ) ) ?>" class="button button-secondary">Update Config</a>
-			<p>Please update the following DNS records to your domain(s) to activate HTTPS. If you want to support HTTPS on the root of your domain, you need to use AWS Route 53 with an "ALIAS" recording point the cloudfront domain listed below.</p>
+			<p><?php esc_html_e( 'Please update the following DNS records to your domain(s) to activate HTTPS. If you want to support HTTPS on the root of your domain, you need to use AWS Route 53 with an "ALIAS" recording point the cloudfront domain listed below.' ) ?></p>
 			<table class="wp-list-table widefat fixed striped">
 				<thead>
 					<tr>
@@ -155,6 +157,8 @@ function admin_page() {
 			</table>
 		<?php endif ?>
 		<?php if ( ! has_certificate() ) : ?>
+			<h2><?php esc_html_e( 'Step 1: Request HTTPS Certificate', 'hm-acm' ) ?></h2>
+			<p><?php esc_html_e( 'The first step to HTTPS is to request a new HTTPS certificate for the domain(s) that will be used on this website. Just requesting the HTTPS certificate will not change anything on the website, don\'t worry!' ) ?></p>
 			<form method="post">
 				<p>
 					<label><?php _e( 'HTTPS Domains', 'hm-acm' ) ?></label><br />
@@ -172,8 +176,9 @@ function admin_page() {
 		<?php elseif ( ! has_verified_certificate() ) : // @codingStandardsIgnoreLine
 			$certificate = get_certificate();
 			?>
+			<h2><?php esc_html_e( 'Step 2: Validate HTTPS Certificate', 'hm-acm' ) ?></h2>
 			<p><?php printf( esc_html__( 'Certificate status: %s', 'hm-acm' ), '<strong>' . esc_html( $certificate['Status'] ) . '</strong>' ) ?>.</p>
-			<p>Please add the following DNS records to your domain(s) to validate.</p>
+			<p><?php esc_html_e( 'To verify you control the domains(s) in the HTTPS certificate request, you must add some special DNS records to your domain name. These are added with your domain\'s nameservers (usually whoever you purchased your domain from). Please add the following DNS records to your domain(s) to validate.', 'hm-acm' ) ?></p>
 			<table class="wp-list-table widefat fixed striped">
 				<thead>
 					<tr>
@@ -202,6 +207,8 @@ function admin_page() {
 				<input type="hidden" name="hm-acm-action" value="refresh-certificate" />
 			</form>
 		<?php elseif ( ! has_cloudfront_distribution() ) : ?>
+			<h2><?php esc_html_e( 'Step 3: Create CDN Configuration', 'hm-acm' ) ?></h2>
+			<p><?php esc_html_e( 'Now you have a valid HTTPS certificate, we need to create a new CDN configuration that will have the HTTPS certificate attached to it. Any requests made to this CDN will use your HTTPS certificate. To create the CDN, please make sure none of your HTTPS certificate\'s domains are attached to other AWS CloudFront distributions.', 'hm-acm' ) ?></p>
 			<form method="post">
 				<p class="submit">
 					<input type="submit" class="button-primary" value="<?php esc_attr_e( 'Create CDN', 'hm-acm' ) ?>" />
@@ -209,8 +216,10 @@ function admin_page() {
 				<?php wp_nonce_field( 'hm-acm-create-cloudfront-distribution' ) ?>
 				<input type="hidden" name="hm-acm-action" value="create-cloudfront-distribution" />
 			</form>
+			<?php do_action( 'hm_acm_below_create_cdn_step' ) ?>
 		<?php elseif ( ! has_completed_cloudfront_distribution() ) : ?>
-			<p><?php printf( esc_html__( 'CDN Status: %s. The CDN take take up to 45 minutes to update.', 'hm-acm' ), esc_html( get_cloudfront_distribution()['Status'] ) ) ?></p>
+			<h2><?php esc_html_e( 'Apply in progress...', 'hm-acm' ) ?></h2>
+			<p><?php printf( esc_html__( 'CDN Status: %s. The CDN take take up to 45 minutes to update. In the meantime your website should largely be available on HTTPS but some connections will take time to be fully updated.', 'hm-acm' ), esc_html( get_cloudfront_distribution()['Status'] ) ) ?></p>
 			<form method="post">
 				<p class="submit">
 					<input class="button-primary" type="submit" value="<?php esc_attr_e( 'Refresh', 'hm-acm' ) ?>" />
@@ -218,6 +227,7 @@ function admin_page() {
 				<?php wp_nonce_field( 'hm-acm-refresh-cloudfront-distribution' ) ?>
 				<input type="hidden" name="hm-acm-action" value="refresh-cloudfront-distribution" />
 			</form>
+			<?php do_action( 'hm_acm_below_create_cdn_step' ) ?>
 		<?php endif ?>
 
 	</div>
