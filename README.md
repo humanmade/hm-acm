@@ -34,6 +34,28 @@ The CloudFront Distribution Config is hard coded in this plugin, and reflects th
 
 HM ACM needs access to the AWS APIs for CloudFront and ACM. To pass the API credentials, you must define the `HM_ACM_AWS_KEY` and `HM_ACM_AWS_SECRET` constants.
 
+The AWS Access Key should have the following policy:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "cloudfront:GetDistribution",
+                "acm:DescribeCertificate",
+                "acm:RequestCertificate",
+                "cloudfront:CreateDistribution",
+                "cloudfront:UpdateDistribution"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+```
+
 ## Limitations
 
 Because this plugin doesn't provide DNS / Nameserver services (via Route 53) it is not possible to use a root domain with the CloudFront distribution. This is because AWS does not provide IP addresses for the CDN, so we don't have anythign to provide users with to add an `A` record to their DNS.
