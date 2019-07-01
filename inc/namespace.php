@@ -405,85 +405,8 @@ function get_cloudfront_distribution_config() : array {
 			],
 		],
 	];
-	return [
-		'DistributionConfig' => [
-			'CallerReference' => site_url(),
-			'Aliases' => [
-				'Items' => $domains,
-				'Quantity' => count( $domains ),
-			],
-			'Comment' => 'Distribution for ' . site_url(),
-			'DefaultCacheBehavior' => [
-				'AllowedMethods' => [
-					'Items' => [ 'GET', 'HEAD', 'OPTIONS', 'PUT', 'PATCH', 'POST', 'DELETE' ],
-					'Quantity' => 7,
-				],
-				'Compress' => true,
-				'DefaultTTL' => 0,
-				'ForwardedValues' => [
-					'Cookies' => [
-						'Forward' => 'whitelist',
-						'WhitelistedNames' => [
-							'Items' => [ 'wp_*', 'wordpress_*', 'hm_*' ],
-							'Quantity' => 3,
-						],
-					],
-					'Headers' => [
-						'Items' => [ 'Authorization' ],
-						'Quantity' => 1,
-					],
-					'QueryString' => true,
-				],
-				'MaxTTL' => 3600 * 24 * 265,
-				'MinTTL' => 0,
-				'TargetOriginId' => 'upstream',
-				'ViewerProtocolPolicy' => 'redirect-to-https',
-				'TrustedSigners' => [
-					'Enabled' => false,
-					'Quantity' => 0,
-				],
-			],
-			'Enabled' => true,
-			'HttpVersion' => 'http2',
-			'IsIPV6Enabled' => true,
-			'Origins' => [
-				'Items' => [
-					[
-						'CustomOriginConfig' => [
-							'HTTPPort' => 80,
-							'HTTPSPort' => 443,
-							'OriginProtocolPolicy' => 'https-only',
-							'OriginSslProtocols' => [
-								'Items' => [ 'SSLv3', 'TLSv1', 'TLSv1.1', 'TLSv1.2' ],
-								'Quantity' => 4,
-							],
-						],
-						'DomainName' => $upstream_domain,
-						'Id' => 'upstream',
-						'CustomHeaders' => [
-							'Items' => [
-								[
-									'HeaderName' => 'X-Forwarded-Host',
-									'HeaderValue' => $domains[0],
-								],
-							],
-							'Quantity' => 1,
-						],
-					],
-				],
-				'Quantity' => 1,
-			],
-			'PriceClass' => 'PriceClass_All',
-			'ViewerCertificate' => [
-				'ACMCertificateArn' => $certificate['CertificateArn'],
-				'CertificateSource' => 'acm',
-				'CloudFrontDefaultCertificate' => false,
-				'MinimumProtocolVersion' => 'TLSv1',
-				'SSLSupportMethod' => 'sni-only',
-			],
-		],
-	];
 }
+
 function get_aws_acm_client() {
 	return get_aws_sdk()->createAcm();
 }
