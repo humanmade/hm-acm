@@ -30,7 +30,12 @@ function refresh_certificate() {
 function get_suggested_domains() : array {
 	$hostname = wp_parse_url( site_url(), PHP_URL_HOST );
 	$secondary = strpos( $hostname, 'www.' ) === 0 ? substr( $hostname, 4 ) : 'www.' . $hostname;
-	return [ $hostname, $secondary ];
+	/**
+	 * Modify suggested domains for the certificate and CloudFront distribution.
+	 *
+	 * @param array $domains Suggested domains for use with AWS services.
+	 */
+	return (array) apply_filters( 'hm.acm.suggested-domains', [ $hostname, $secondary ] );
 }
 
 /**
