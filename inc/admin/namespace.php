@@ -191,9 +191,9 @@ function admin_page() {
 				<tbody>
 					<?php foreach ( $certificate['DomainValidationOptions'] as $domain ) : ?>
 						<tr>
-							<td><?php echo esc_html( $domain['ResourceRecord']['Name'] ) ?></td>
-							<td><?php echo esc_html( $domain['ResourceRecord']['Type'] ) ?></td>
-							<td><?php echo esc_html( $domain['ResourceRecord']['Value'] ) ?></td>
+							<td><?php echo esc_html( $domain['ResourceRecord']['Name'] ?? '' ) ?></td>
+							<td><?php echo esc_html( $domain['ResourceRecord']['Type'] ?? '' ) ?></td>
+							<td><?php echo esc_html( $domain['ResourceRecord']['Value'] ?? '' ) ?></td>
 							<td><?php echo esc_html( $domain['ValidationStatus'] ) ?></td>
 						</tr>
 					<?php endforeach ?>

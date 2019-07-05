@@ -62,7 +62,8 @@ function create_certificate( array $domains ) : array {
 
 	$arn = $result['CertificateArn'];
 
-	sleep( 3 ); // What a great hack.
+	// Allows enough time for AWS to generate ResourceRecord for provided domains before we call 'describeCertificate' for the certificate at hand.
+	sleep( 10 );
 	$certificate = get_aws_acm_client()->describeCertificate([
 		'CertificateArn' => $arn,
 	])['Certificate'];
