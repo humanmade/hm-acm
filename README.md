@@ -32,7 +32,7 @@ The CloudFront Distribution Config is hard coded in this plugin, and reflects th
 
 ## Configuration
 
-HM ACM needs access to the AWS APIs for CloudFront and ACM. To pass the API credentials, you must define the `HM_ACM_AWS_KEY` and `HM_ACM_AWS_SECRET` constants.
+HM ACM needs access to the AWS APIs for CloudFront and ACM. To pass the API credentials, you must define the `HM_ACM_AWS_KEY` and `HM_ACM_AWS_SECRET` constants. You also have to define `HM_ACM_UPSTREAM_DOMAIN` (ELB domain name) to set correct origin for new domain.
 
 The AWS Access Key should have the following policy:
 
