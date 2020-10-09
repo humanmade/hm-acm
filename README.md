@@ -58,7 +58,7 @@ The AWS Access Key should have the following policy:
 
 ## Limitations
 
-Because this plugin doesn't provide DNS / Nameserver services (via Route 53) it is not possible to use a root domain with the CloudFront distribution. This is because AWS does not provide IP addresses for the CDN, so we don't have anythign to provide users with to add an `A` record to their DNS.
+Because this plugin doesn't provide DNS / Nameserver services (via Route 53) it is not possible to use a root domain with the CloudFront distribution. This is because AWS does not provide IP addresses for the CDN, so we don't have anything to provide users with to add an `A` record to their DNS.
 
 The path forward here is probably to incorperate Route 53 in to this plugin, so instead of providing users with DNS records, we give them nameservers to switch to. This adds the complication of needing to add UI for general DNS management, as users will likely need to now manage things like MX records.
 
