@@ -32,7 +32,13 @@ The CloudFront Distribution Config is hard coded in this plugin, and reflects th
 
 ## Configuration
 
-HM ACM needs access to the AWS APIs for CloudFront and ACM. To pass the API credentials, you must define the `HM_ACM_AWS_KEY` and `HM_ACM_AWS_SECRET` constants. You also have to define `HM_ACM_UPSTREAM_DOMAIN` (ELB domain name) to set correct origin for new domain.
+HM ACM needs access to the AWS APIs for CloudFront and ACM. To pass the API credentials, you must define the `HM_ACM_AWS_KEY` and `HM_ACM_AWS_SECRET` constants. You also have to define `HM_ACM_UPSTREAM_DOMAIN` (upstream CloudFront domain name) to set correct origin for new domain.
+
+Also the constants need to be defined for `HM_ACM_UPSTREAM_CLOUDFRONT_FUNCTION_ARN` which must be a CloudFront function ARN. This is used to forward the Host header to the upstream CloudFront distribution.
+
+`HM_ACM_CLOUDFRONT_CACHE_POLICY_ID` must be defined as the ID of the CloudFront cache policy to use for the distribution.
+
+`HM_ACM_CLOUDFRONT_ORIGIN_REQUEST_POLICY_ID` must be defined as the ID of the CloudFront origin request policy to use for the distribution.
 
 The AWS Access Key should have the following policy:
 

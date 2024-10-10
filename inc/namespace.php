@@ -125,7 +125,6 @@ function unlink_cloudfront_distribution() {
 
 function get_cloudfront_distribution_config() : array {
 	$certificate = get_certificate();
-	$s3_uploads_location = explode( '/', S3_UPLOADS_BUCKET );
 	$domains = array_unique( array_merge( [ $certificate['DomainName'] ], $certificate['SubjectAlternativeNames'] ) );
 	return [
 		'CallerReference' => site_url(),
@@ -135,21 +134,11 @@ function get_cloudfront_distribution_config() : array {
 		],
 		'DefaultRootObject' => '',
 		'Origins' => [
-			'Quantity' => 2,
+			'Quantity' => 1,
 			'Items' => [
+
 				[
-					'Id' => 'S3-Uploads',
-					'DomainName' => $s3_uploads_location[0] . '.s3.amazonaws.com',
-					'OriginPath' => '/' . $s3_uploads_location[1],
-					'CustomHeaders' => [
-						'Quantity' => 0,
-					],
-					'S3OriginConfig' => [
-						'OriginAccessIdentity' => '',
-					],
-				],
-				[
-					'Id' => 'web',
+					'Id' => 'altis-cloud',
 					'DomainName' => HM_ACM_UPSTREAM_DOMAIN,
 					'OriginPath' => '',
 					'CustomHeaders' => [
@@ -158,55 +147,32 @@ function get_cloudfront_distribution_config() : array {
 					'CustomOriginConfig' => [
 						'HTTPPort' => 80,
 						'HTTPSPort' => 443,
-						'OriginProtocolPolicy' => 'http-only',
+						'OriginProtocolPolicy' => 'https-only',
 						'OriginSslProtocols' => [
-							'Quantity' => 2,
+							'Quantity' => 1,
 							'Items' => [
-								'SSLv3',
-								'TLSv1',
+								'TLSv1.2',
 							],
 						],
 						'OriginReadTimeout' => 60,
 						'OriginKeepaliveTimeout' => 5,
 					],
+					'ConnectionAttempts' => 3,
+					'ConnectionTimeout' => 10,
+					'OriginShield' => [
+						'Enabled' => false,
+					],
+					'OriginAccessControlId' => '',
 				],
 			],
 		],
 		'DefaultCacheBehavior' => [
-			'TargetOriginId' => 'web',
-			'ForwardedValues' => [
-				'QueryString' => true,
-				'Cookies' => [
-					'Forward' => 'whitelist',
-					'WhitelistedNames' => [
-						'Quantity' => 5,
-						'Items' => [
-							'comment_*',
-							'hm_*',
-							'wordpress_*',
-							'wp-*',
-							'wp_*',
-						],
-					],
-				],
-				'Headers' => [
-					'Quantity' => 3,
-					'Items' => [
-						'Authorization',
-						'CloudFront-Forwarded-Proto',
-						'Host',
-					],
-				],
-				'QueryStringCacheKeys' => [
-					'Quantity' => 0,
-				],
-			],
+			'TargetOriginId' => 'altis-cloud',
 			'TrustedSigners' => [
 				'Enabled' => false,
 				'Quantity' => 0,
 			],
 			'ViewerProtocolPolicy' => 'redirect-to-https',
-			'MinTTL' => '0',
 			'AllowedMethods' => [
 				'Quantity' => 7,
 				'Items' => [
@@ -228,158 +194,29 @@ function get_cloudfront_distribution_config() : array {
 				],
 			],
 			'SmoothStreaming' => false,
-			'DefaultTTL' => '0',
-			'MaxTTL' => '31536000',
-			'Compress' => false,
+			'Compress' => true,
 			'FieldLevelEncryptionId' => '',
 			'LambdaFunctionAssociations' => [
 				'Quantity' => 0,
 			],
+			"FunctionAssociations" => [
+				"Quantity" => 1,
+				"Items" => [
+					[
+						"FunctionARN" => HM_ACM_UPSTREAM_CLOUDFRONT_FUNCTION_ARN,
+						"EventType" => "viewer-request"
+
+					]
+				]
+			],
+			"CachePolicyId" => HM_ACM_CLOUDFRONT_CACHE_POLICY_ID,
+			"OriginRequestPolicyId" => HM_ACM_CLOUDFRONT_ORIGIN_REQUEST_POLICY_ID,
 		],
 		'CacheBehaviors' => [
-			'Quantity' => 2,
-			'Items' => [
-				[
-					'PathPattern' => '/uploads/*',
-					'TargetOriginId' => 'S3-Uploads',
-					'ForwardedValues' => [
-						'QueryString' => true,
-						'Cookies' => [
-							'Forward' => 'none',
-						],
-						'Headers' => [
-							'Quantity' => 3,
-							'Items' => [
-								'Access-Control-Request-Headers',
-								'Access-Control-Request-Method',
-								'Origin',
-							],
-						],
-						'QueryStringCacheKeys' => [
-							'Quantity' => 0,
-						],
-					],
-					'TrustedSigners' => [
-						'Enabled' => false,
-						'Quantity' => 0,
-					],
-					'ViewerProtocolPolicy' => 'allow-all',
-					'MinTTL' => '0',
-					'AllowedMethods' => [
-						'Quantity' => 2,
-						'Items' => [
-							'HEAD',
-							'GET',
-						],
-						'CachedMethods' => [
-							'Quantity' => 2,
-							'Items' => [
-								'HEAD',
-								'GET',
-							],
-						],
-					],
-					'SmoothStreaming' => false,
-					'DefaultTTL' => '31530000',
-					'MaxTTL' => '31536000',
-					'Compress' => false,
-					'FieldLevelEncryptionId' => '',
-					'LambdaFunctionAssociations' => [
-						'Quantity' => 0,
-					],
-				],
-				[
-					'PathPattern' => '/blogs.dir/*',
-					'TargetOriginId' => 'S3-Uploads',
-					'ForwardedValues' => [
-						'QueryString' => true,
-						'Cookies' => [
-							'Forward' => 'none',
-						],
-						'Headers' => [
-							'Quantity' => 3,
-							'Items' => [
-								'Access-Control-Request-Headers',
-								'Access-Control-Request-Method',
-								'Origin',
-							],
-						],
-						'QueryStringCacheKeys' => [
-							'Quantity' => 0,
-						],
-					],
-					'TrustedSigners' => [
-						'Enabled' => false,
-						'Quantity' => 0,
-					],
-					'ViewerProtocolPolicy' => 'allow-all',
-					'MinTTL' => '0',
-					'AllowedMethods' => [
-						'Quantity' => 3,
-						'Items' => [
-							'HEAD',
-							'GET',
-							'OPTIONS',
-						],
-						'CachedMethods' => [
-							'Quantity' => 2,
-							'Items' => [
-								'HEAD',
-								'GET',
-							],
-						],
-					],
-					'SmoothStreaming' => false,
-					'DefaultTTL' => '31530000',
-					'MaxTTL' => '31536000',
-					'Compress' => false,
-					'FieldLevelEncryptionId' => '',
-					'LambdaFunctionAssociations' => [
-						'Quantity' => 0,
-					],
-				],
-			],
+			'Quantity' => 0,
 		],
 		'CustomErrorResponses' => [
-			'Quantity' => 6,
-			'Items' => [
-				[
-					'ErrorCode' => 400,
-					'ResponsePagePath' => '',
-					'ResponseCode' => '',
-					'ErrorCachingMinTTL' => '10',
-				],
-				[
-					'ErrorCode' => 404,
-					'ResponsePagePath' => '',
-					'ResponseCode' => '',
-					'ErrorCachingMinTTL' => '300',
-				],
-				[
-					'ErrorCode' => 500,
-					'ResponsePagePath' => '',
-					'ResponseCode' => '',
-					'ErrorCachingMinTTL' => '0',
-				],
-				[
-					'ErrorCode' => 502,
-					'ResponsePagePath' => '',
-					'ResponseCode' => '',
-					'ErrorCachingMinTTL' => '0',
-				],
-				[
-					'ErrorCode' => 503,
-					'ResponsePagePath' => '',
-					'ResponseCode' => '',
-					'ErrorCachingMinTTL' => '0',
-				],
-				[
-					'ErrorCode' => 504,
-					'ResponsePagePath' => '',
-					'ResponseCode' => '',
-					'ErrorCachingMinTTL' => '0',
-				],
-			],
+			'Quantity' => 0,
 		],
 		'Comment' => '',
 		'PriceClass' => 'PriceClass_All',
@@ -389,7 +226,7 @@ function get_cloudfront_distribution_config() : array {
 			'SSLSupportMethod' => 'sni-only',
 			'MinimumProtocolVersion' => 'TLSv1',
 		],
-		'HttpVersion' => 'http2',
+		'HttpVersion' => 'http2and3',
 		'IsIPV6Enabled' => true,
 		'Logging' => [
 			'Enabled' => false,
