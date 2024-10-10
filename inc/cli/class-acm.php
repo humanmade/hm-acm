@@ -115,7 +115,7 @@ class Acm {
 
 			$this->query_args['site__in'] = $site_ids;
 
-			WP_CLI::confirm( sprintf( 'Are you sure you want to run this command for site(s) %d?', implode( ', ', $site_ids ) ), $assoc_args );
+			WP_CLI::confirm( sprintf( 'Are you sure you want to run this command for site(s) %s?', implode( ', ', $site_ids ) ), $assoc_args );
 		}
 	}
 
@@ -131,10 +131,10 @@ class Acm {
 	 * : Comma separated list of domains to create the certificate for. Required for create-cert action.
 	 *
 	 * [--include=<site-id>]
-	 * : The ID of the site(s) to perform the action on. Default to current site.
+	 * : Comma separated list of IDs of the sites to perform the action on. Default to current site.
 	 *
 	 * [--exclude=<site-id>]
-	 * : The ID of the site(s) to exclude from the action. Useful if you want the command to run network wide but exclude for example main site.
+	 * : Comma separated list of IDs of the sites to exclude from the action. Useful if you want the command to run network wide but exclude for example main site.
 	 *
 	 * [--network]
 	 * : Whether to perform the action on all sites on the network.
