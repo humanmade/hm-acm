@@ -150,7 +150,7 @@ function admin_page() {
 							<td><?php echo esc_html( $domain ) ?></td>
 							<td>CNAME</td>
 							<td><?php echo esc_html( $distribution['DomainName'] ) ?></td>
-							<td><?php echo dns_get_record( $domain, DNS_CNAME )['target'] === $distribution['DomainName'] ? 'Varified' : 'Unknown' ?></td>
+							<td><?php echo dns_get_record( $domain, DNS_CNAME )['target'] === $distribution['DomainName'] ? 'Verified' : 'Unknown' ?></td>
 						</tr>
 					<?php endforeach ?>
 				</tbody>

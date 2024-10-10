@@ -42,7 +42,7 @@ function get_suggested_domains() : array {
  * Get a new ACM certificate.
  *
  * @param array $domains
- * @return string
+ * @return array
  */
 function create_certificate( array $domains ) : array {
 	$primary = $domains[0];
