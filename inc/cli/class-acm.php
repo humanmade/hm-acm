@@ -7,7 +7,17 @@ declare( strict_types=1 );
 
 namespace HM\ACM\CLI\Commands;
 
+use Exception;
+use Throwable;
 use WP_CLI;
+
+use function HM\ACM\create_certificate;
+use function HM\ACM\create_cloudfront_distribution;
+use function HM\ACM\get_suggested_domains;
+use function HM\ACM\has_certificate;
+use function HM\ACM\has_verified_certificate;
+use function HM\ACM\refresh_certificate;
+use function HM\ACM\unlink_certificate;
 
 /**
  * Class for registering ACM specific WP-CLI commands.
@@ -250,7 +260,7 @@ class Acm {
 				default:
 					break;
 			}
-		} catch ( \Throwable $exception ) {
+		} catch ( Throwable $exception ) {
 			WP_CLI::error( $exception->getMessage() );
 		}
 	}
@@ -264,7 +274,7 @@ class Acm {
 	 * @return boolean
 	 */
 	private function create_cert( int $site_id, array $assoc_args ): bool {
-		if ( \HM\ACM\has_certificate() ) {
+		if ( has_certificate() ) {
 			if ( $this->verbose ) {
 				WP_CLI::success( sprintf( 'Site %d already has an SSL certificate.', $site_id ) );
 			}
@@ -278,7 +288,7 @@ class Acm {
 			 * Allow for domains to be passed via the suggested domains filter.
 			 * Useful for when the domains aren't typed via the command but need to be retrieved from database.
 			 */
-			$domains = \HM\ACM\get_suggested_domains();
+			$domains = get_suggested_domains();
 		} else {
 			$domains = explode( ',', $assoc_args['domains'] );
 		}
@@ -290,7 +300,7 @@ class Acm {
 			return false;
 		}
 
-		$certificate = (array) \HM\ACM\create_certificate( $domains );
+		$certificate = (array) create_certificate( $domains );
 
 		if ( $certificate ) {
 			// Add cert details to CSV row.
@@ -343,16 +353,16 @@ class Acm {
 	 * @return boolean
 	 */
 	private function verify_cert( int $site_id ): bool {
-		if ( ! \HM\ACM\has_certificate() ) {
+		if ( ! has_certificate() ) {
 			if ( $this->verbose ) {
 				WP_CLI::warning( sprintf( 'Site %d does not have an SSL certificate so nothing to verify.', $site_id ) );
 			}
 			return false;
 		}
 
-		\HM\ACM\refresh_certificate();
+		refresh_certificate();
 
-		return \HM\ACM\has_verified_certificate();
+		return has_verified_certificate();
 	}
 
 	/**
@@ -362,14 +372,14 @@ class Acm {
 	 * @return boolean
 	 */
 	private function delete_cert( int $site_id ): bool {
-		if ( ! \HM\ACM\has_certificate() ) {
+		if ( ! has_certificate() ) {
 			if ( $this->verbose ) {
 				WP_CLI::warning( sprintf( 'Site %d does not have an SSL certificate so nothing to delete.', $site_id ) );
 			}
 			return false;
 		}
 
-		\HM\ACM\unlink_certificate(); // This just removes the option in WP and allows for another cert to be requested.
+		unlink_certificate(); // This just removes the option in WP and allows for another cert to be requested.
 
 		return true;
 	}
@@ -381,7 +391,7 @@ class Acm {
 	 * @return boolean
 	 */
 	private function create_cloudfront( int $site_id ): bool {
-		if ( ! \HM\ACM\has_verified_certificate() ) {
+		if ( ! has_verified_certificate() ) {
 			if ( $this->verbose ) {
 				WP_CLI::warning( sprintf( 'Site %d does not have a verified ACM SSL certificate so CloudFront distribution cannot be created.', $site_id ) );
 			}
@@ -389,8 +399,8 @@ class Acm {
 		}
 
 		try {
-			\HM\ACM\create_cloudfront_distribution();
-		} catch ( \Exception $e ) {
+			create_cloudfront_distribution();
+		} catch ( Exception $e ) {
 			if ( $this->verbose ) {
 				WP_CLI::error( sprintf( 'Failed to create CloudFront distribution for site %d. Error: %s', $site_id, $e->getMessage() ) );
 			}
