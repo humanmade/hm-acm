@@ -230,6 +230,7 @@ function admin_page() {
 			<?php do_action( 'hm_acm_below_create_cdn_step' ) ?>
 		<?php endif ?>
 
+		<?php do_action( 'hm_acm_below_steps' ) ?>
 	</div>
 	<?php
 }
