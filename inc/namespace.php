@@ -260,7 +260,7 @@ function get_aws_sdk() {
 	}
 
 	$params = [
-		'region'  => 'us-east-1',
+		'region'  => apply_filters( 'hm.acm.region', 'us-east-1' ),
 		'version' => 'latest',
 	];
 
