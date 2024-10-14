@@ -101,3 +101,18 @@ wp --url=https://www.example.com/ search-replace http://examplenetwork.com/uploa
 ```
 
 You should now see https://www.example.com/ functional with HTTPS.
+
+## CLI
+
+The plugin includes a CLI command `hm-acm` which allows for executing some actions via CLI for a specific site, list of sites or network wide. The currently supported actions are:
+
+- **create-cert** which will create an ACM certificate given a comma separated list of domains. If no domains are supplied via the command then they'll be attempted to be retrieved via the suggested domains function allows for filtering the domains via other plugins.
+- **verify-cert** which will refresh the details of an ACM certificate in WordPress. Helps check if the records to validate the cert have been added.
+- **delete-cert** which will unlink an ACM certificate in WordPress from a site.
+- **create-cloudfront** which will create a CloudFront distribution provided the site has a verified certificate.
+
+Example usage:
+
+```bash
+wp hm-acm {action} {associative args}
+```
