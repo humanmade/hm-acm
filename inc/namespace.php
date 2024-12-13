@@ -292,6 +292,20 @@ function get_cloudfront_function_arn(): ?string {
  *
  */
 function create_cloudfront_function() : string {
+
+	// Before creating a CloudFront function, check if we have functions
+	// that already already created that still have associations available.
+	$existing_policies = get_cloudfront_functions();
+	foreach ( $existing_policies as $function_arn => $sites ) {
+		if ( count( $sites ) >= HM_ACM_CLOUDFRONT_FUNCTIONS_PER_DISTRIBUTION ) {
+			continue;
+		}
+
+		add_site_to_cloudfront_function( $function_arn, get_current_blog_id() );
+		update_option( 'hm-cloudfront-function', $function_arn );
+		return $function_arn;
+	}
+
 	$client = get_aws_cloudfront_client();
 	$name = get_current_blog_id() . '-remap-host-header';
 	$function = $client->createFunction([
@@ -311,8 +325,31 @@ function create_cloudfront_function() : string {
 		'Name' => $name,
 	]);
 
+	add_site_to_cloudfront_function( $arn, get_current_blog_id() );
+
 	update_option( 'hm-cloudfront-function', $arn );
 	return $arn;
+}
+
+/**
+ * Get all the created origin request policies on the network.
+ *
+ * We have to batch CloudFront Origin Request policies as we're limited by both the number of total policies and the number of
+ * associations between a single policy and many distributions.
+ *
+ * @return array<string, list<int>> A map of policy Id's to array of sites that are using the policy in their CloudFront Distributions.
+ */
+function get_cloudfront_functions() : array {
+	return get_site_option( 'hm-acm-cloudfront-functions', [] );
+}
+
+/**
+ * Add a site to the origin request policies on the network.
+ */
+function add_site_to_cloudfront_function( string $function_arn, int $site_id ) : void {
+	$policies = get_cloudfront_functions();
+	$policies[ $function_arn ][] = $site_id;
+	update_site_option( 'hm-acm-cloudfront-functions', $policies );
 }
 
 
@@ -342,6 +379,8 @@ function create_cloudfront_origin_request_policy() : string {
 		}
 
 		update_option( 'hm-cloudfront-origin-request-policy', $policy_id );
+		add_site_to_cloudfront_origin_request_policy( $policy_id, get_current_blog_id() );
+		return $policy_id;
 	}
 
 	$client = get_aws_cloudfront_client();
