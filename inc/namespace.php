@@ -328,10 +328,22 @@ function get_cloudfront_origin_request_policy_id(): ?string {
 	return get_option( 'hm-cloudfront-origin-request-policy', null );
 }
 /**
- * Create the CloudFront function that is responsible for the Viewer Request in setting the X-Original-Host
+ * Create or find an existing CloudFront Origin Request policy.
+ *
+ * @return string The Origin Request Policy Id.
  *
  */
 function create_cloudfront_origin_request_policy() : string {
+
+	$existing_policies = get_cloudfront_origin_request_policies();
+	foreach ( $existing_policies as $policy_id => $sites ) {
+		if ( count( $sites ) >= HM_ACM_ORIGIN_REQUEST_POLICIES_PER_DISTRIBUTION ) {
+			continue;
+		}
+
+		update_option( 'hm-cloudfront-origin-request-policy', $policy_id );
+	}
+
 	$client = get_aws_cloudfront_client();
 	$name = get_current_blog_id() . '-hm-acm';
 	$policy = $client->createOriginRequestPolicy([
@@ -358,10 +370,33 @@ function create_cloudfront_origin_request_policy() : string {
 		],
 	]);
 
-	update_option( 'hm-cloudfront-origin-request-policy', $policy['OriginRequestPolicy']['Id'] );
-	return $policy['OriginRequestPolicy']['Id'];
+	$policy_id = $policy['OriginRequestPolicy']['Id'];
+	add_site_to_cloudfront_origin_request_policy( $policy_id, get_current_blog_id() );
+
+	update_option( 'hm-cloudfront-origin-request-policy', $policy_id );
+	return $policy_id;
 }
 
+/**
+ * Get all the created origin request policies on the network.
+ *
+ * We have to batch CloudFront Origin Request policies as we're limited by both the number of total policies and the number of
+ * associations between a single policy and many distributions.
+ *
+ * @return array<string, list<int>> A map of policy Id's to array of sites that are using the policy in their CloudFront Distributions.
+ */
+function get_cloudfront_origin_request_policies() : array {
+	return get_site_option( 'hm-acm-origin-request-policies', [] );
+}
+
+/**
+ * Add a site to the origin request policies on the network.
+ */
+function add_site_to_cloudfront_origin_request_policy( string $policy_id, int $site_id ) : void {
+	$policies = get_cloudfront_origin_request_policies();
+	$policies[ $policy_id ][] = $site_id;
+	update_site_option( 'hm-acm-origin-request-policies', $policies );
+}
 
 function get_aws_acm_client() {
 	return get_aws_sdk()->createAcm();
