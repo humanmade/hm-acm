@@ -146,6 +146,9 @@ class Acm {
 	 * [--exclude=<site-id>]
 	 * : Comma separated list of IDs of the sites to exclude from the action. Useful if you want the command to run network wide but exclude for example main site.
 	 *
+	 * [--rate=<rate>]
+	 * : How many sites to process at a time before sleeping for 1 second. Default is 5.
+	 *
 	 * [--network]
 	 * : Whether to perform the action on all sites on the network.
 	 *
@@ -184,9 +187,11 @@ class Acm {
 					break;
 				}
 
+				$rate = $assoc_args['rate'] ? intval( $assoc_args['rate'] ) : 5; // How many sites to process at a time before sleeping for 1 second.
+
 				for ( $i = 0; $i < count( $query->sites ); $i++ ) {
-					if ( $i % 5 === 0 ) {
-						// Sleep for 1 second every 5 sites to avoid rate limiting.
+					if ( $i % $rate === 0 ) {
+						// Sleep for 1 second every X sites to avoid rate limiting.
 						sleep( 1 );
 					}
 
