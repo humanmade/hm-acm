@@ -15,6 +15,7 @@ use function HM\ACM\create_certificate;
 use function HM\ACM\create_cloudfront_distribution;
 use function HM\ACM\get_suggested_domains;
 use function HM\ACM\has_certificate;
+use function HM\ACM\has_cloudfront_distribution;
 use function HM\ACM\has_verified_certificate;
 use function HM\ACM\refresh_certificate;
 use function HM\ACM\unlink_certificate;
@@ -396,6 +397,13 @@ class Acm {
 	 * @return boolean
 	 */
 	private function create_cloudfront( int $site_id ): bool {
+		if ( has_cloudfront_distribution() ) {
+			if ( $this->verbose ) {
+				WP_CLI::success( sprintf( 'Site %d already has a CloudFront distribution.', $site_id ) );
+			}
+			return true;
+		}
+
 		if ( ! has_certificate() ) {
 			if ( $this->verbose ) {
 				WP_CLI::warning( sprintf( 'Site %d does not have an SSL certificate so CloudFront distribution cannot be created.', $site_id ) );
