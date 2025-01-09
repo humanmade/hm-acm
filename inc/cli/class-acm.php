@@ -19,6 +19,7 @@ use function HM\ACM\has_cloudfront_distribution;
 use function HM\ACM\has_verified_certificate;
 use function HM\ACM\refresh_certificate;
 use function HM\ACM\unlink_certificate;
+use function HM\ACM\unlink_cloudfront_distribution;
 
 /**
  * Class for registering ACM specific WP-CLI commands.
@@ -222,6 +223,9 @@ class Acm {
 							case 'create-cloudfront':
 								$result = $this->create_cloudfront( $site_id );
 								break;
+							case 'delete-cloudfront':
+								$result = $this->delete_cloudfront( $site_id );
+								break;
 							default:
 								break;
 						}
@@ -386,6 +390,25 @@ class Acm {
 		}
 
 		unlink_certificate(); // This just removes the option in WP and allows for another cert to be requested.
+
+		return true;
+	}
+
+	/**
+	 * Delete CloudFront distribution for a site.
+	 *
+	 * @param int $site_id The ID of the site.
+	 * @return boolean
+	 */
+	private function delete_cloudfront( int $site_id ): bool {
+		if ( ! has_cloudfront_distribution() ) {
+			if ( $this->verbose ) {
+				WP_CLI::warning( sprintf( 'Site %d does not have a CloudFront distribution so nothing to delete.', $site_id ) );
+			}
+			return false;
+		}
+
+		unlink_cloudfront_distribution(); // This just removes the option in WP and allows for another CloudFront distribution to be created and linked.
 
 		return true;
 	}
