@@ -396,6 +396,13 @@ class Acm {
 	 * @return boolean
 	 */
 	private function create_cloudfront( int $site_id ): bool {
+		if ( ! has_certificate() ) {
+			if ( $this->verbose ) {
+				WP_CLI::warning( sprintf( 'Site %d does not have an SSL certificate so CloudFront distribution cannot be created.', $site_id ) );
+			}
+			return false;
+		}
+
 		if ( ! has_verified_certificate() ) {
 			if ( $this->verbose ) {
 				WP_CLI::warning( sprintf( 'Site %d does not have a verified ACM SSL certificate so CloudFront distribution cannot be created.', $site_id ) );
