@@ -392,7 +392,10 @@ function create_cloudfront_origin_request_policy() : string {
 			'HeadersConfig' => [
 				'HeaderBehavior' => 'allExcept',
 				'Headers' => [
-					'Host',
+					'Quantity' => 1,
+					'Items' => [
+						'Host',
+					],
 				],
 			],
 			'QueryStringsConfig' => [
