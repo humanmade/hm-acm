@@ -390,7 +390,10 @@ function create_cloudfront_origin_request_policy() : string {
 			'Comment' => 'HM-ACM origin request policy',
 			'Name' => $name,
 			'HeadersConfig' => [
-				'HeaderBehavior' => 'allViewer',
+				'HeaderBehavior' => 'allExcept',
+				'Headers' => [
+					'Host',
+				],
 			],
 			'QueryStringsConfig' => [
 				'QueryStringBehavior' => 'all',
