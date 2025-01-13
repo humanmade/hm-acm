@@ -92,7 +92,7 @@ class Acm {
 			WP_CLI::error( 'An action is required.' );
 		}
 
-		if ( ! in_array( $this->action, [ 'create-cert', 'verify-cert', 'delete-cert', 'create-cloudfront' ], true ) ) {
+		if ( ! in_array( $this->action, [ 'create-cert', 'verify-cert', 'delete-cert', 'create-cloudfront', 'delete-cloudfront' ], true ) ) {
 			WP_CLI::error( 'Invalid action provided.' );
 		}
 
