@@ -15,9 +15,11 @@ use function HM\ACM\create_certificate;
 use function HM\ACM\create_cloudfront_distribution;
 use function HM\ACM\get_suggested_domains;
 use function HM\ACM\has_certificate;
+use function HM\ACM\has_cloudfront_distribution;
 use function HM\ACM\has_verified_certificate;
 use function HM\ACM\refresh_certificate;
 use function HM\ACM\unlink_certificate;
+use function HM\ACM\unlink_cloudfront_distribution;
 
 /**
  * Class for registering ACM specific WP-CLI commands.
@@ -90,7 +92,7 @@ class Acm {
 			WP_CLI::error( 'An action is required.' );
 		}
 
-		if ( ! in_array( $this->action, [ 'create-cert', 'verify-cert', 'delete-cert', 'create-cloudfront' ], true ) ) {
+		if ( ! in_array( $this->action, [ 'create-cert', 'verify-cert', 'delete-cert', 'create-cloudfront', 'delete-cloudfront' ], true ) ) {
 			WP_CLI::error( 'Invalid action provided.' );
 		}
 
@@ -146,6 +148,9 @@ class Acm {
 	 * [--exclude=<site-id>]
 	 * : Comma separated list of IDs of the sites to exclude from the action. Useful if you want the command to run network wide but exclude for example main site.
 	 *
+	 * [--rate=<rate>]
+	 * : How many sites to process at a time before sleeping for 1 second. Default is 5.
+	 *
 	 * [--network]
 	 * : Whether to perform the action on all sites on the network.
 	 *
@@ -184,9 +189,11 @@ class Acm {
 					break;
 				}
 
+				$rate = $assoc_args['rate'] ? intval( $assoc_args['rate'] ) : 5; // How many sites to process at a time before sleeping for 1 second.
+
 				for ( $i = 0; $i < count( $query->sites ); $i++ ) {
-					if ( $i % 5 === 0 ) {
-						// Sleep for 1 second every 5 sites to avoid rate limiting.
+					if ( $i % $rate === 0 ) {
+						// Sleep for 1 second every X sites to avoid rate limiting.
 						sleep( 1 );
 					}
 
@@ -215,6 +222,9 @@ class Acm {
 								break;
 							case 'create-cloudfront':
 								$result = $this->create_cloudfront( $site_id );
+								break;
+							case 'delete-cloudfront':
+								$result = $this->delete_cloudfront( $site_id );
 								break;
 							default:
 								break;
@@ -385,12 +395,45 @@ class Acm {
 	}
 
 	/**
+	 * Delete CloudFront distribution for a site.
+	 *
+	 * @param int $site_id The ID of the site.
+	 * @return boolean
+	 */
+	private function delete_cloudfront( int $site_id ): bool {
+		if ( ! has_cloudfront_distribution() ) {
+			if ( $this->verbose ) {
+				WP_CLI::warning( sprintf( 'Site %d does not have a CloudFront distribution so nothing to delete.', $site_id ) );
+			}
+			return false;
+		}
+
+		unlink_cloudfront_distribution(); // This just removes the option in WP and allows for another CloudFront distribution to be created and linked.
+
+		return true;
+	}
+
+	/**
 	 * Create CloudFront distribution for a site.
 	 *
 	 * @param int $site_id The ID of the site.
 	 * @return boolean
 	 */
 	private function create_cloudfront( int $site_id ): bool {
+		if ( has_cloudfront_distribution() ) {
+			if ( $this->verbose ) {
+				WP_CLI::success( sprintf( 'Site %d already has a CloudFront distribution.', $site_id ) );
+			}
+			return true;
+		}
+
+		if ( ! has_certificate() ) {
+			if ( $this->verbose ) {
+				WP_CLI::warning( sprintf( 'Site %d does not have an SSL certificate so CloudFront distribution cannot be created.', $site_id ) );
+			}
+			return false;
+		}
+
 		if ( ! has_verified_certificate() ) {
 			if ( $this->verbose ) {
 				WP_CLI::warning( sprintf( 'Site %d does not have a verified ACM SSL certificate so CloudFront distribution cannot be created.', $site_id ) );

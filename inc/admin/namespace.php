@@ -2,10 +2,14 @@
 
 namespace HM\ACM\Admin;
 
+use function HM\ACM\get_cloudfront_function_arn;
+use function HM\ACM\get_cloudfront_origin_request_policy_id;
 use function HM\ACM\get_suggested_domains;
 use function HM\ACM\has_certificate;
 use function HM\ACM\create_certificate;
 use Exception;
+use function HM\ACM\has_cloudfront_function;
+use function HM\ACM\has_cloudfront_origin_request_policy;
 use function HM\ACM\has_verified_certificate;
 use function HM\ACM\get_certificate;
 use function HM\ACM\refresh_certificate;
@@ -132,6 +136,14 @@ function admin_page() : void {
 			<h4><?php printf( esc_html__( 'HTTPS Certificate: %1$s (%2$s)', 'hm-acm' ), implode( ', ', $certificate['SubjectAlternativeNames'] ),  $certificate['Status'] ) ?></h4>
 			<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( 'hm-acm-action', 'unlink-certificate' ), 'hm-acm-unlink-certificate' ) ) ?>" class="button button-secondary"><?php esc_html_e( 'Unlink', 'hm-acm' ) ?></a>
 		<?php endif ?>
+		<?php if ( has_cloudfront_function() ) : ?>
+			<h4><?php printf( esc_html__( 'CDN Function: %s', 'hm-acm' ), get_cloudfront_function_arn() ) ?></h4>
+		<?php endif ?>
+
+		<?php if ( has_cloudfront_origin_request_policy() ) : ?>
+			<h4><?php printf( esc_html__( 'CDN Request Policy: %s', 'hm-acm' ), get_cloudfront_origin_request_policy_id() ) ?></h4>
+		<?php endif ?>
+
 		<?php if ( has_cloudfront_distribution() ) : ?>
 			<?php
 			$distribution = get_cloudfront_distribution();
