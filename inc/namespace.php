@@ -4,18 +4,38 @@ namespace HM\ACM;
 
 use Exception;
 
+/**
+ * Check whether the site has a certificate set as an option.
+ *
+ * @return boolean True if the certificate is set.
+ */
 function has_certificate() : bool {
 	return (bool) get_option( 'hm-acm-certificate' );
 }
 
+/**
+ * Check whether the site's certificate has been verified.
+ *
+ * @return boolean True if the certificate is verified.
+ */
 function has_verified_certificate() {
 	return get_certificate()['Status'] === 'ISSUED';
 }
 
+/**
+ * Get the certificate details for the site.
+ *
+ * @return array An array of certificate details, derived from \AWS\Result.
+ */
 function get_certificate() : array {
 	return get_option( 'hm-acm-certificate' );
 }
 
+/**
+ * Refresh the certificate from AWS and update the site option to match, or remove it on failure.
+ *
+ * @return void
+ */
 function refresh_certificate() {
 	try {
 		$certificate = get_aws_acm_client()->describeCertificate([
@@ -72,6 +92,12 @@ function create_certificate( array $domains ) : array {
 	return $certificate;
 }
 
+/**
+ * Unlink the certificate from the site by deleting the option.
+ * Note this does not delete the certificate from AWS.
+ *
+ * @return void
+ */
 function unlink_certificate() {
 	delete_option( 'hm-acm-certificate' );
 }
@@ -107,6 +133,11 @@ function create_cloudfront_distribution() {
 	update_option( 'hm-cloudfront-distribution', $result['Distribution'] );
 }
 
+/**
+ * Update the existing Cloudfront distribution.
+ *
+ * @return void
+ */
 function update_cloudfront_distribution_config() {
 	$current_distribution = get_aws_cloudfront_client()->getDistribution([
 		'Id' => get_cloudfront_distribution()['Id'],
@@ -253,6 +284,11 @@ function get_aws_cloudfront_client() {
 	return get_aws_sdk()->createCloudFront();
 }
 
+/**
+ * Get the AWS instance for the network.
+ *
+ * @return \AWS\Sdk AWS SDK class for the network.
+ */
 function get_aws_sdk() {
 	static $sdk;
 	if ( $sdk ) {

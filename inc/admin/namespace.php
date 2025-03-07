@@ -116,7 +116,12 @@ function on_unlink_cloudfront_distribution() {
 	exit;
 }
 
-function admin_page() {
+/**
+ * Display the admin page content to administer certificate setup.
+ *
+ * @return void
+ */
+function admin_page() : void {
 	?>
 	<div class="wrap">
 		<h1><?php _e( 'HTTPS Certificate', 'hm-acm' ) ?></h1>
