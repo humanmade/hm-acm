@@ -21,6 +21,7 @@ use function HM\ACM\refresh_cloudfront_distribution;
 use function HM\ACM\update_cloudfront_distribution_config;
 use function HM\ACM\unlink_certificate;
 use function HM\ACM\unlink_cloudfront_distribution;
+use function HM\ACM\distribution_matches_certificate;
 
 function bootstrap() {
 	add_submenu_page( 'tools.php', __( 'HTTPS Certificate', 'hm-acm' ), __( 'HTTPS Certificate', 'hm-acm' ), 'manage_options', 'hm-acm', __NAMESPACE__ . '\\admin_page' );
@@ -169,6 +170,11 @@ function admin_page() : void {
 			$distribution = get_cloudfront_distribution();
 			?>
 			<h4><?php printf( esc_html__( 'CDN Distribution: %s', 'hm-acm' ), $distribution['Id'] ) ?></h4>
+
+			<?php if( ! distribution_matches_certificate() ): ?>
+				<div class="notice notice-warning notice-alt"><p><?php esc_html_e( 'Warning: Your distribution is not using the linked certificate. Please update your config (below).', 'hm-acm' ) ?></p></div>
+			<?php endif ?>
+
 			<?php if ( $show_unlink_distribution ): ?>
 				<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( 'hm-acm-action', 'unlink-cloudfront-distribution' ), 'hm-acm-unlink-cloudfront-distribution' ) ) ?>" class="button button-secondary"><?php esc_html_e( 'Unlink', 'hm-acm' ) ?></a>
 			<?php endif ?>

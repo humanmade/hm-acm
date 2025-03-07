@@ -32,6 +32,23 @@ function get_certificate() : array {
 }
 
 /**
+ * Check whether the distribution is using the linked certificate.
+ *
+ * @return bool True if certificates match, else false.
+ */
+function distribution_matches_certificate() : bool {
+	$certificate = get_certificate();
+	$distribution = get_cloudfront_distribution();
+
+	if( empty( $certificate ) || empty( $distribution ) ) {
+		return false;
+	}
+
+	return $certificate['CertificateArn'] === ( $distribution['DistributionConfig']['ViewerCertificate']['ACMCertificateArn'] ?? false );
+
+}
+
+/**
  * Refresh the certificate from AWS and update the site option to match, or remove it on failure.
  *
  * @return void
