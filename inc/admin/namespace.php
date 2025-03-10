@@ -178,7 +178,7 @@ function admin_page() : void {
 	/**
 	* Determine whether or not to show the unlink distribution button.
 	*
-	* @param bool $show_unlink_distribution True if the unlink certificate button should be shown, otherwise false.
+	* @param bool $show_unlink_distribution True if the unlink distribution button should be shown, otherwise false.
 	*/
 	$show_unlink_distribution= apply_filters( 'hm.acm.show_unlink_distribution', true );
 

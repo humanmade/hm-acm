@@ -37,12 +37,13 @@ function get_certificate() : array {
  * @return bool True if certificates match, else false.
  */
 function distribution_matches_certificate() : bool {
-	$certificate = get_certificate();
-	$distribution = get_cloudfront_distribution();
 
-	if( empty( $certificate ) || empty( $distribution ) ) {
+	if( ! has_certificate() || ! has_cloudfront_distribution() ) {
 		return false;
 	}
+
+	$certificate = get_certificate();
+	$distribution = get_cloudfront_distribution();
 
 	return $certificate['CertificateArn'] === ( $distribution['DistributionConfig']['ViewerCertificate']['ACMCertificateArn'] ?? false );
 
