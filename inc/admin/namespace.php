@@ -133,9 +133,9 @@ function display_certificate_details() : void {
 	}
 
 	printf(
-		'<details><summary>%s</summary><pre><code>%s</code></pre></details>',
+		'<details><summary><strong>%s</strong></summary><pre><code>%s</code></pre></details><br/>',
 		esc_html__( 'Certificate Details', 'hm-acm' ),
-		esc_html( get_certificate() )
+		esc_html( print_r( get_certificate(), true ) )
 
 	);
 }
@@ -154,9 +154,9 @@ function display_cloudfront_distribution_details() : void {
 	}
 
 	printf(
-		'<details><summary>%s</summary><pre><code>%s</code></pre></details>',
-		esc_html__( 'Certificate Details', 'hm-acm' ),
-		esc_html( $distribution )
+		'<details><summary><strong>%s</strong></summary><pre><code>%s</code></pre></details><br/>',
+		esc_html__( 'Cloudfront Distribution Details', 'hm-acm' ),
+		esc_html( print_r( $distribution, true ) )
 
 	);
 }
@@ -192,11 +192,11 @@ function admin_page() : void {
 			?>
 			<h4><?php printf( esc_html__( 'HTTPS Certificate: %1$s (%2$s)', 'hm-acm' ), implode( ', ', $certificate['SubjectAlternativeNames'] ),  $certificate['Status'] ) ?></h4>
 
+			<?php display_certificate_details(); ?>
+
 			<?php if ( $show_unlink_certificate ): ?>
 				<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( 'hm-acm-action', 'unlink-certificate' ), 'hm-acm-unlink-certificate' ) ) ?>" class="button button-secondary"><?php esc_html_e( 'Unlink', 'hm-acm' ) ?></a>
 			<?php endif ?>
-
-			<?php display_certificate_details(); ?>
 
 		<?php endif ?>
 		<?php if ( has_cloudfront_function() ) : ?>
@@ -212,6 +212,8 @@ function admin_page() : void {
 			$distribution = get_cloudfront_distribution();
 			?>
 			<h4><?php printf( esc_html__( 'CDN Distribution: %s', 'hm-acm' ), $distribution['Id'] ) ?></h4>
+
+			<?php display_cloudfront_distribution_details(); ?>
 
 			<?php if( ! distribution_matches_certificate() ): ?>
 				<div class="notice notice-warning notice-alt"><p><?php esc_html_e( 'Warning: Your distribution is not using the linked certificate. Please update your config (below).', 'hm-acm' ) ?></p></div>
@@ -243,7 +245,6 @@ function admin_page() : void {
 				</tbody>
 			</table>
 
-			<?php display_cloudfront_distribution_details(); ?>
 		<?php endif ?>
 		<?php if ( ! has_certificate() ) : ?>
 			<h2><?php esc_html_e( 'Step 1: Request HTTPS Certificate', 'hm-acm' ) ?></h2>
