@@ -122,6 +122,46 @@ function on_unlink_cloudfront_distribution() {
 }
 
 /**
+ * Display details of the certificate in an accordion to aid debugging.
+ *
+ * @return void
+ */
+function display_certificate_details() : void {
+
+	if( ! has_certificate() ) {
+		return;
+	}
+
+	printf(
+		'<details><summary>%s</summary><pre><code>%s</code></pre></details>',
+		esc_html__( 'Certificate Details', 'hm-acm' ),
+		esc_html( get_certificate() )
+
+	);
+}
+
+/**
+ * Display details of the distribution in an accordion to aid debugging.
+ *
+ * @return void
+ */
+function display_cloudfront_distribution_details() : void {
+
+	$distribution = get_cloudfront_distribution();
+
+	if( empty( $distribution ) ) {
+		return;
+	}
+
+	printf(
+		'<details><summary>%s</summary><pre><code>%s</code></pre></details>',
+		esc_html__( 'Certificate Details', 'hm-acm' ),
+		esc_html( $distribution )
+
+	);
+}
+
+/**
  * Display the admin page content to administer certificate setup.
  *
  * @return void
@@ -155,6 +195,8 @@ function admin_page() : void {
 			<?php if ( $show_unlink_certificate ): ?>
 				<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( 'hm-acm-action', 'unlink-certificate' ), 'hm-acm-unlink-certificate' ) ) ?>" class="button button-secondary"><?php esc_html_e( 'Unlink', 'hm-acm' ) ?></a>
 			<?php endif ?>
+
+			<?php display_certificate_details(); ?>
 
 		<?php endif ?>
 		<?php if ( has_cloudfront_function() ) : ?>
@@ -200,6 +242,8 @@ function admin_page() : void {
 					<?php endforeach ?>
 				</tbody>
 			</table>
+
+			<?php display_cloudfront_distribution_details(); ?>
 		<?php endif ?>
 		<?php if ( ! has_certificate() ) : ?>
 			<h2><?php esc_html_e( 'Step 1: Request HTTPS Certificate', 'hm-acm' ) ?></h2>
@@ -210,7 +254,7 @@ function admin_page() : void {
 					<input type="text" class="widefat" value="<?php echo esc_attr( implode( ', ', get_suggested_domains() ) ) ?>" name="domains" />
 				</p>
 				<p class="description">
-					<?php _e( 'Seperate multiple domains with a comma.' ) ?>
+					<?php _e( 'Separate multiple domains with a comma.' ) ?>
 				</p>
 				<p class="submit">
 					<input type="submit" class="button-primary" value="<?php esc_attr_e( 'Request Certificate', 'hm-acm' ) ?>" />
