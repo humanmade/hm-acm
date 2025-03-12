@@ -101,6 +101,14 @@ function refresh_cloudfront_distribution() {
 }
 
 function create_cloudfront_distribution() {
+	if ( ! has_cloudfront_function() ) {
+		create_cloudfront_function();
+	}
+
+	if ( ! has_cloudfront_origin_request_policy() ) {
+		create_cloudfront_origin_request_policy();
+	}
+
 	$result = get_aws_cloudfront_client()->createDistribution( [
 		'DistributionConfig' => get_cloudfront_distribution_config(),
 	] );
@@ -111,22 +119,37 @@ function update_cloudfront_distribution_config() {
 	$current_distribution = get_aws_cloudfront_client()->getDistribution([
 		'Id' => get_cloudfront_distribution()['Id'],
 	]);
+
+	if ( ! has_cloudfront_function() ) {
+		create_cloudfront_function();
+	}
+
+	if ( ! has_cloudfront_origin_request_policy() ) {
+		create_cloudfront_origin_request_policy();
+	}
+
 	$result = get_aws_cloudfront_client()->updateDistribution( [
 		'DistributionConfig' => get_cloudfront_distribution_config(),
 		'Id' => get_cloudfront_distribution()['Id'],
 		'IfMatch' => $current_distribution['ETag'],
 	] );
+
 	update_option( 'hm-cloudfront-distribution', $result['Distribution'] );
 }
 
 function unlink_cloudfront_distribution() {
 	delete_option( 'hm-cloudfront-distribution' );
+	delete_option( 'hm-cloudfront-function' );
+	delete_option( 'hm-cloudfront-origin-request-policy' );
 }
 
 function get_cloudfront_distribution_config() : array {
 	$certificate = get_certificate();
 	$domains = array_unique( array_merge( [ $certificate['DomainName'] ], $certificate['SubjectAlternativeNames'] ) );
-	return [
+	$cloudfront_function_arn = get_cloudfront_function_arn();
+	$origin_request_policy_id = get_cloudfront_origin_request_policy_id();
+
+	$config = [
 		'CallerReference' => site_url(),
 		'Aliases' => [
 			'Items' => $domains,
@@ -200,17 +223,11 @@ function get_cloudfront_distribution_config() : array {
 				'Quantity' => 0,
 			],
 			"FunctionAssociations" => [
-				"Quantity" => 1,
-				"Items" => [
-					[
-						"FunctionARN" => HM_ACM_UPSTREAM_CLOUDFRONT_FUNCTION_ARN,
-						"EventType" => "viewer-request"
-
-					]
-				]
+				"Quantity" => 0,
+				"Items" => []
 			],
 			"CachePolicyId" => HM_ACM_CLOUDFRONT_CACHE_POLICY_ID,
-			"OriginRequestPolicyId" => HM_ACM_CLOUDFRONT_ORIGIN_REQUEST_POLICY_ID,
+			"OriginRequestPolicyId" => $origin_request_policy_id,
 		],
 		'CacheBehaviors' => [
 			'Quantity' => 0,
@@ -243,6 +260,187 @@ function get_cloudfront_distribution_config() : array {
 			],
 		],
 	];
+
+	if ( $cloudfront_function_arn ) {
+		$config['DefaultCacheBehavior']['FunctionAssociations'] = [
+			'Quantity' => 1,
+			'Items' => [
+				[
+					"FunctionARN" => $cloudfront_function_arn,
+					"EventType" => "viewer-request"
+				]
+			]
+		];
+	}
+
+	return $config;
+}
+
+function has_cloudfront_function() : bool {
+	return get_option( 'hm-cloudfront-function', false );
+}
+
+function unlink_cloudfront_function() {
+	delete_option( 'hm-cloudfront-function' );
+}
+
+function get_cloudfront_function_arn(): ?string {
+	return get_option( 'hm-cloudfront-function', null );
+}
+/**
+ * Create the CloudFront function that is responsible for the Viewer Request in setting the X-Original-Host
+ *
+ */
+function create_cloudfront_function() : string {
+
+	// Before creating a CloudFront function, check if we have functions
+	// that already already created that still have associations available.
+	$existing_policies = get_cloudfront_functions();
+	foreach ( $existing_policies as $function_arn => $sites ) {
+		if ( count( $sites ) >= HM_ACM_CLOUDFRONT_FUNCTIONS_PER_DISTRIBUTION ) {
+			continue;
+		}
+
+		add_site_to_cloudfront_function( $function_arn, get_current_blog_id() );
+		update_option( 'hm-cloudfront-function', $function_arn );
+		return $function_arn;
+	}
+
+	$client = get_aws_cloudfront_client();
+	$name = get_current_blog_id() . '-remap-host-header';
+	$function = $client->createFunction([
+		'FunctionCode' => file_get_contents( __DIR__ . '/cloudfront-function.js' ),
+		'FunctionConfig' => [
+			'Comment' => 'Sets the X-Original-Host header.',
+			'Runtime' => 'cloudfront-js-2.0',
+		],
+		'Name' => $name,
+	]);
+
+	$arn = $function['FunctionSummary']['FunctionMetadata']['FunctionARN'];
+	$etag = $function['ETag'];
+
+	$client->publishFunction([
+		'IfMatch' => $etag,
+		'Name' => $name,
+	]);
+
+	add_site_to_cloudfront_function( $arn, get_current_blog_id() );
+
+	update_option( 'hm-cloudfront-function', $arn );
+	return $arn;
+}
+
+/**
+ * Get all the created origin request policies on the network.
+ *
+ * We have to batch CloudFront Origin Request policies as we're limited by both the number of total policies and the number of
+ * associations between a single policy and many distributions.
+ *
+ * @return array<string, list<int>> A map of policy Id's to array of sites that are using the policy in their CloudFront Distributions.
+ */
+function get_cloudfront_functions() : array {
+	return get_site_option( 'hm-acm-cloudfront-functions', [] );
+}
+
+/**
+ * Add a site to the origin request policies on the network.
+ */
+function add_site_to_cloudfront_function( string $function_arn, int $site_id ) : void {
+	$policies = get_cloudfront_functions();
+	$policies[ $function_arn ][] = $site_id;
+	update_site_option( 'hm-acm-cloudfront-functions', $policies );
+}
+
+
+function has_cloudfront_origin_request_policy() : bool {
+	return get_option( 'hm-cloudfront-origin-request-policy', false );
+}
+
+function unlink_cloudfront_origin_request_policy() {
+	delete_option( 'hm-cloudfront-origin-request-policy' );
+}
+
+function get_cloudfront_origin_request_policy_id(): ?string {
+	return get_option( 'hm-cloudfront-origin-request-policy', null );
+}
+/**
+ * Create or find an existing CloudFront Origin Request policy.
+ *
+ * @return string The Origin Request Policy Id.
+ *
+ */
+function create_cloudfront_origin_request_policy() : string {
+
+	$existing_policies = get_cloudfront_origin_request_policies();
+	foreach ( $existing_policies as $policy_id => $sites ) {
+		if ( count( $sites ) >= HM_ACM_ORIGIN_REQUEST_POLICIES_PER_DISTRIBUTION ) {
+			continue;
+		}
+
+		update_option( 'hm-cloudfront-origin-request-policy', $policy_id );
+		add_site_to_cloudfront_origin_request_policy( $policy_id, get_current_blog_id() );
+		return $policy_id;
+	}
+
+	$client = get_aws_cloudfront_client();
+	$name = get_current_blog_id() . '-hm-acm';
+	$policy = $client->createOriginRequestPolicy([
+		'OriginRequestPolicyConfig' => [
+			'Comment' => 'HM-ACM origin request policy',
+			'Name' => $name,
+			'HeadersConfig' => [
+				'HeaderBehavior' => 'allExcept',
+				'Headers' => [
+					'Quantity' => 1,
+					'Items' => [
+						'Host',
+					],
+				],
+			],
+			'QueryStringsConfig' => [
+				'QueryStringBehavior' => 'all',
+			],
+			'CookiesConfig' => [
+				'CookieBehavior' => 'whitelist',
+				'Cookies' => [
+					'Quantity' => 3,
+					'Items' => [
+						"hm_*",
+						"wp_*",
+						"wordpress_*"
+					],
+				]
+			],
+		],
+	]);
+
+	$policy_id = $policy['OriginRequestPolicy']['Id'];
+	add_site_to_cloudfront_origin_request_policy( $policy_id, get_current_blog_id() );
+
+	update_option( 'hm-cloudfront-origin-request-policy', $policy_id );
+	return $policy_id;
+}
+
+/**
+ * Get all the created origin request policies on the network.
+ *
+ * We have to batch CloudFront Origin Request policies as we're limited by both the number of total policies and the number of
+ * associations between a single policy and many distributions.
+ *
+ * @return array<string, list<int>> A map of policy Id's to array of sites that are using the policy in their CloudFront Distributions.
+ */
+function get_cloudfront_origin_request_policies() : array {
+	return get_site_option( 'hm-acm-origin-request-policies', [] );
+}
+
+/**
+ * Add a site to the origin request policies on the network.
+ */
+function add_site_to_cloudfront_origin_request_policy( string $policy_id, int $site_id ) : void {
+	$policies = get_cloudfront_origin_request_policies();
+	$policies[ $policy_id ][] = $site_id;
+	update_site_option( 'hm-acm-origin-request-policies', $policies );
 }
 
 function get_aws_acm_client() {
