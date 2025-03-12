@@ -21,6 +21,7 @@ use function HM\ACM\refresh_cloudfront_distribution;
 use function HM\ACM\update_cloudfront_distribution_config;
 use function HM\ACM\unlink_certificate;
 use function HM\ACM\unlink_cloudfront_distribution;
+use function HM\ACM\distribution_matches_certificate;
 
 function bootstrap() {
 	add_submenu_page( 'tools.php', __( 'HTTPS Certificate', 'hm-acm' ), __( 'HTTPS Certificate', 'hm-acm' ), 'manage_options', 'hm-acm', __NAMESPACE__ . '\\admin_page' );
@@ -120,7 +121,68 @@ function on_unlink_cloudfront_distribution() {
 	exit;
 }
 
-function admin_page() {
+/**
+ * Display details of the certificate in an accordion to aid debugging.
+ *
+ * @return void
+ */
+function display_certificate_details() : void {
+
+	if( ! has_certificate() ) {
+		return;
+	}
+
+	printf(
+		'<details><summary><strong>%s</strong></summary><pre><code>%s</code></pre></details><br/>',
+		esc_html__( 'Certificate Details', 'hm-acm' ),
+		esc_html( print_r( get_certificate(), true ) )
+
+	);
+}
+
+/**
+ * Display details of the distribution in an accordion to aid debugging.
+ *
+ * @return void
+ */
+function display_cloudfront_distribution_details() : void {
+
+	$distribution = get_cloudfront_distribution();
+
+	if( empty( $distribution ) ) {
+		return;
+	}
+
+	printf(
+		'<details><summary><strong>%s</strong></summary><pre><code>%s</code></pre></details><br/>',
+		esc_html__( 'Cloudfront Distribution Details', 'hm-acm' ),
+		esc_html( print_r( $distribution, true ) )
+
+	);
+}
+
+/**
+ * Display the admin page content to administer certificate setup.
+ *
+ * @return void
+ */
+function admin_page() : void {
+
+	/**
+	* Determine whether or not to show the unlink certificate button.
+	*
+	* @param bool $show_unlink_certificate True if the unlink certificate button should be shown, otherwise false.
+	*/
+	$show_unlink_certificate = apply_filters( 'hm.acm.show_unlink_certificate', true );
+
+	/**
+	* Determine whether or not to show the unlink distribution button.
+	*
+	* @param bool $show_unlink_distribution True if the unlink distribution button should be shown, otherwise false.
+	*/
+	$show_unlink_distribution= apply_filters( 'hm.acm.show_unlink_distribution', true );
+
+
 	?>
 	<div class="wrap">
 		<h1><?php _e( 'HTTPS Certificate', 'hm-acm' ) ?></h1>
@@ -129,7 +191,13 @@ function admin_page() {
 			$certificate = get_certificate();
 			?>
 			<h4><?php printf( esc_html__( 'HTTPS Certificate: %1$s (%2$s)', 'hm-acm' ), implode( ', ', $certificate['SubjectAlternativeNames'] ),  $certificate['Status'] ) ?></h4>
-			<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( 'hm-acm-action', 'unlink-certificate' ), 'hm-acm-unlink-certificate' ) ) ?>" class="button button-secondary"><?php esc_html_e( 'Unlink', 'hm-acm' ) ?></a>
+
+			<?php display_certificate_details(); ?>
+
+			<?php if ( $show_unlink_certificate ): ?>
+				<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( 'hm-acm-action', 'unlink-certificate' ), 'hm-acm-unlink-certificate' ) ) ?>" class="button button-secondary"><?php esc_html_e( 'Unlink', 'hm-acm' ) ?></a>
+			<?php endif ?>
+
 		<?php endif ?>
 		<?php if ( has_cloudfront_function() ) : ?>
 			<h4><?php printf( esc_html__( 'CDN Function: %s', 'hm-acm' ), get_cloudfront_function_arn() ) ?></h4>
@@ -144,7 +212,16 @@ function admin_page() {
 			$distribution = get_cloudfront_distribution();
 			?>
 			<h4><?php printf( esc_html__( 'CDN Distribution: %s', 'hm-acm' ), $distribution['Id'] ) ?></h4>
-			<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( 'hm-acm-action', 'unlink-cloudfront-distribution' ), 'hm-acm-unlink-cloudfront-distribution' ) ) ?>" class="button button-secondary"><?php esc_html_e( 'Unlink', 'hm-acm' ) ?></a>
+
+			<?php display_cloudfront_distribution_details(); ?>
+
+			<?php if( ! distribution_matches_certificate() ): ?>
+				<div class="notice notice-warning notice-alt"><p><?php esc_html_e( 'Warning: Your distribution is not using the linked certificate. Please update your config (below).', 'hm-acm' ) ?></p></div>
+			<?php endif ?>
+
+			<?php if ( $show_unlink_distribution ): ?>
+				<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( 'hm-acm-action', 'unlink-cloudfront-distribution' ), 'hm-acm-unlink-cloudfront-distribution' ) ) ?>" class="button button-secondary"><?php esc_html_e( 'Unlink', 'hm-acm' ) ?></a>
+			<?php endif ?>
 			<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( 'hm-acm-action', 'update-cloudfront-distribution-config' ), 'hm-acm-update-cloudfront-distribution-config' ) ) ?>" class="button button-secondary">Update Config</a>
 			<p><?php esc_html_e( 'Please update the following DNS records to your domain(s) to activate HTTPS. If you want to support HTTPS on the root of your domain, you need to use AWS Route 53 with an "ALIAS" recording point the cloudfront domain listed below.' ) ?></p>
 			<table class="wp-list-table widefat fixed striped">
@@ -167,6 +244,7 @@ function admin_page() {
 					<?php endforeach ?>
 				</tbody>
 			</table>
+
 		<?php endif ?>
 		<?php if ( ! has_certificate() ) : ?>
 			<h2><?php esc_html_e( 'Step 1: Request HTTPS Certificate', 'hm-acm' ) ?></h2>
@@ -177,7 +255,7 @@ function admin_page() {
 					<input type="text" class="widefat" value="<?php echo esc_attr( implode( ', ', get_suggested_domains() ) ) ?>" name="domains" />
 				</p>
 				<p class="description">
-					<?php _e( 'Seperate multiple domains with a comma.' ) ?>
+					<?php _e( 'Separate multiple domains with a comma.' ) ?>
 				</p>
 				<p class="submit">
 					<input type="submit" class="button-primary" value="<?php esc_attr_e( 'Request Certificate', 'hm-acm' ) ?>" />
