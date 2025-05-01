@@ -207,6 +207,10 @@ function get_cloudfront_distribution_config( $caller_reference = null ) : array 
 	// If we haven't passed an explicit caller reference, then use the site url.
 	$caller_reference = $caller_reference ?? site_url();
 
+	$site_url = site_url();
+
+	error_log( "Caller Reference: $caller_reference. Site URL: $site_url" );
+
 	$config = [
 		'CallerReference' => $caller_reference,
 		'Aliases' => [
