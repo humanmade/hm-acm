@@ -208,7 +208,7 @@ function get_cloudfront_distribution_config( $caller_reference = null ) : array 
 	$caller_reference = $caller_reference ?? site_url();
 
 	$config = [
-		'CallerReference' => site_url(),
+		'CallerReference' => $caller_reference,
 		'Aliases' => [
 			'Items' => $domains,
 			'Quantity' => count( $domains ),
