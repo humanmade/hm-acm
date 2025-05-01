@@ -178,7 +178,7 @@ function update_cloudfront_distribution_config() {
 	}
 
 	$result = get_aws_cloudfront_client()->updateDistribution( [
-		'DistributionConfig' => get_cloudfront_distribution_config(),
+		'DistributionConfig' => get_cloudfront_distribution_config( $current_distribution[ 'CallerReference' ] ),
 		'Id' => get_cloudfront_distribution()['Id'],
 		'IfMatch' => $current_distribution['ETag'],
 	] );
@@ -192,11 +192,20 @@ function unlink_cloudfront_distribution() {
 	delete_option( 'hm-cloudfront-origin-request-policy' );
 }
 
-function get_cloudfront_distribution_config() : array {
+/**
+ * Get the config for a Cloudfront distribution
+ *
+ * @param string|null $caller_reference The caller reference to pass to the distribution config.
+ * @return array The Cloudfront distribution config to pass to AWS.
+ */
+function get_cloudfront_distribution_config( $caller_reference = null ) : array {
 	$certificate = get_certificate();
 	$domains = array_unique( array_merge( [ $certificate['DomainName'] ], $certificate['SubjectAlternativeNames'] ) );
 	$cloudfront_function_arn = get_cloudfront_function_arn();
 	$origin_request_policy_id = get_cloudfront_origin_request_policy_id();
+
+	// If we haven't passed an explicit caller reference, then use the site url.
+	$caller_reference = $caller_reference ?? site_url();
 
 	$config = [
 		'CallerReference' => site_url(),
