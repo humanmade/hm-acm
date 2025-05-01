@@ -178,8 +178,10 @@ function update_cloudfront_distribution_config() {
 	}
 	error_log( $current_distribution );
 
+	$caller_reference = $current_distribution[ 'Distribution' ][ 'DistributionConfig' ][ 'CallerReference' ];
+
 	$result = get_aws_cloudfront_client()->updateDistribution( [
-		'DistributionConfig' => get_cloudfront_distribution_config( $current_distribution[ 'CallerReference' ] ),
+		'DistributionConfig' => get_cloudfront_distribution_config( $caller_reference ),
 		'Id' => get_cloudfront_distribution()['Id'],
 		'IfMatch' => $current_distribution['ETag'],
 	] );
