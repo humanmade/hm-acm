@@ -176,6 +176,7 @@ function update_cloudfront_distribution_config() {
 	if ( ! has_cloudfront_origin_request_policy() ) {
 		create_cloudfront_origin_request_policy();
 	}
+	error_log( $current_distribution );
 
 	$result = get_aws_cloudfront_client()->updateDistribution( [
 		'DistributionConfig' => get_cloudfront_distribution_config( $current_distribution[ 'CallerReference' ] ),
