@@ -301,7 +301,7 @@ function get_cloudfront_distribution_config( $caller_reference = null ) : array 
 		'ViewerCertificate' => [
 			'ACMCertificateArn' => $certificate['CertificateArn'],
 			'SSLSupportMethod' => 'sni-only',
-			'MinimumProtocolVersion' => 'TLSv1',
+			'MinimumProtocolVersion' => 'TLSv1.2_2025',
 		],
 		'HttpVersion' => 'http2and3',
 		'IsIPV6Enabled' => true,
