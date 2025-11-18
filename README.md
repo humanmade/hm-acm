@@ -109,7 +109,7 @@ The plugin includes a CLI command `hm-acm` which allows for executing some actio
 - **create-cert** which will create an ACM certificate given a comma separated list of domains. If no domains are supplied via the command then they'll be attempted to be retrieved via the suggested domains function allows for filtering the domains via other plugins.
 - **verify-cert** which will refresh the details of an ACM certificate in WordPress. Helps check if the records to validate the cert have been added.
 - **delete-cert** which will unlink an ACM certificate in WordPress from a site.
-- **create-cloudfront** which will create a CloudFront distribution provided the site has a verified certificate.
+- **create-cloudfront**, **delete-cloudfront** and **update-cloudfront** which will create, delete or update respectively a CloudFront distribution provided the site has a verified certificate.
 
 Example usage:
 
