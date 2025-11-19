@@ -20,6 +20,7 @@ use function HM\ACM\has_verified_certificate;
 use function HM\ACM\refresh_certificate;
 use function HM\ACM\unlink_certificate;
 use function HM\ACM\unlink_cloudfront_distribution;
+use function HM\ACM\update_cloudfront_distribution_config;
 
 /**
  * Class for registering ACM specific WP-CLI commands.
@@ -92,7 +93,16 @@ class Acm {
 			WP_CLI::error( 'An action is required.' );
 		}
 
-		if ( ! in_array( $this->action, [ 'create-cert', 'verify-cert', 'delete-cert', 'create-cloudfront', 'delete-cloudfront' ], true ) ) {
+		$valid_actions = [
+			'create-cert',
+			'verify-cert',
+			'delete-cert',
+			'create-cloudfront',
+			'delete-cloudfront',
+			'update-cloudfront',
+		];
+
+		if ( ! in_array( $this->action, $valid_actions, true ) ) {
 			WP_CLI::error( 'Invalid action provided.' );
 		}
 
@@ -225,6 +235,9 @@ class Acm {
 								break;
 							case 'delete-cloudfront':
 								$result = $this->delete_cloudfront( $site_id );
+								break;
+							case 'update-cloudfront':
+								$result = $this->update_cloudfront( $site_id );
 								break;
 							default:
 								break;
@@ -446,6 +459,46 @@ class Acm {
 		} catch ( Exception $e ) {
 			if ( $this->verbose ) {
 				WP_CLI::error( sprintf( 'Failed to create CloudFront distribution for site %d. Error: %s', $site_id, $e->getMessage() ) );
+			}
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Update CloudFront distribution for a site.
+	 *
+	 * @param int $site_id The ID of the site.
+	 * @return boolean
+	 */
+	private function update_cloudfront( int $site_id ): bool {
+		if ( ! has_cloudfront_distribution() ) {
+			if ( $this->verbose ) {
+				WP_CLI::warning( sprintf( 'Site %d does not have a CloudFront distribution so nothing to update.', $site_id ) );
+			}
+			return false;
+		}
+
+		if ( ! has_certificate() ) {
+			if ( $this->verbose ) {
+				WP_CLI::warning( sprintf( 'Site %d does not have an ACM SSL certificate so CloudFront distribution cannot be updated.', $site_id ) );
+			}
+			return false;
+		}
+
+		if ( ! has_verified_certificate() ) {
+			if ( $this->verbose ) {
+				WP_CLI::warning( sprintf( 'Site %d does not have a verified ACM SSL certificate so CloudFront distribution cannot be updated.', $site_id ) );
+			}
+			return false;
+		}
+
+		try {
+			update_cloudfront_distribution_config();
+		} catch ( Exception $e ) {
+			if ( $this->verbose ) {
+				WP_CLI::error( sprintf( 'Failed to update CloudFront distribution for site %d. Error: %s', $site_id, $e->getMessage() ) );
 			}
 			return false;
 		}
