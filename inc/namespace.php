@@ -178,9 +178,16 @@ function update_cloudfront_distribution_config() {
 	}
 
 	$caller_reference = $current_distribution[ 'Distribution' ][ 'DistributionConfig' ][ 'CallerReference' ];
+	$config = get_cloudfront_distribution_config( $caller_reference );
+
+	// Preserve the existing WebACLId from the live distribution if no
+	// explicit WAF Web ACL has been configured via constant.
+	if ( ! defined( 'HM_ACM_WAF_WEB_ACL_ID' ) ) {
+		$config['WebACLId'] = $current_distribution['Distribution']['DistributionConfig']['WebACLId'] ?? '';
+	}
 
 	$result = get_aws_cloudfront_client()->updateDistribution( [
-		'DistributionConfig' => get_cloudfront_distribution_config( $caller_reference ),
+		'DistributionConfig' => $config,
 		'Id' => get_cloudfront_distribution()['Id'],
 		'IfMatch' => $current_distribution['ETag'],
 	] );
@@ -311,7 +318,7 @@ function get_cloudfront_distribution_config( $caller_reference = null ) : array 
 			'Prefix' => '',
 			'Bucket' => '',
 		],
-		'WebACLId' => '',
+		'WebACLId' => defined( 'HM_ACM_WAF_WEB_ACL_ID' ) ? HM_ACM_WAF_WEB_ACL_ID : '',
 		'Restrictions' => [
 			'GeoRestriction' => [
 				'Items' => [],
