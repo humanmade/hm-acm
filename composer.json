@@ -1,0 +1,12 @@
+{
+    "name": "humanmade/hm-acm",
+    "description": "WordPress plugin for user-land AWS ACM and CloudFront HTTPS",
+    "type": "wordpress-plugin",
+    "authors": [
+        {
+            "name": "Joe HoyleJoe Hoyle",
+            "email": "joehoyle@gmail.com"
+        }
+    ],
+    "require": {}
+}
