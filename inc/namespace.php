@@ -169,6 +169,23 @@ function update_cloudfront_distribution_config() {
 		'Id' => get_cloudfront_distribution()['Id'],
 	]);
 
+	$caller_reference = $current_distribution[ 'Distribution' ][ 'DistributionConfig' ][ 'CallerReference' ];
+
+	/**
+	 * Allow updating a CloudFront distribution that was created by a different site.
+	 *
+	 * @param bool   $allow            Whether to allow the update. Default false.
+	 * @param string $caller_reference CallerReference of the distribution.
+	 */
+	if ( ! is_own_cloudfront_distribution( $caller_reference ) && ! apply_filters( 'hm.acm.allow_update_other_site_distribution', false, $caller_reference ) ) {
+		throw new Exception( sprintf(
+			'CloudFront distribution %1$s was created by %2$s, not by this site (%3$s). This site was probably copied from that one, and updating it would replace that site\'s domains and certificate. Unlink the distribution from this site (wp hm-acm delete-cloudfront) and create a new one.',
+			get_cloudfront_distribution()['Id'],
+			$caller_reference,
+			site_url()
+		) );
+	}
+
 	if ( ! has_cloudfront_function() ) {
 		create_cloudfront_function();
 	}
@@ -177,7 +194,6 @@ function update_cloudfront_distribution_config() {
 		create_cloudfront_origin_request_policy();
 	}
 
-	$caller_reference = $current_distribution[ 'Distribution' ][ 'DistributionConfig' ][ 'CallerReference' ];
 	$config = get_cloudfront_distribution_config( $caller_reference );
 
 	// Preserve the existing WebACLId from the live distribution if no
@@ -193,6 +209,26 @@ function update_cloudfront_distribution_config() {
 	] );
 
 	update_option( 'hm-cloudfront-distribution', $result['Distribution'] );
+}
+
+/**
+ * Check whether a CloudFront distribution was created by the current site.
+ *
+ * The plugin sets CallerReference to site_url() when it creates a distribution, and it never
+ * changes afterwards. A site copied together with its options holds the original site's
+ * distribution, whose CallerReference is the original site's URL.
+ *
+ * The scheme is ignored: site_url() returns http or https depending on the request.
+ *
+ * @param string $caller_reference CallerReference of the distribution.
+ * @return bool True if the distribution was created by the current site.
+ */
+function is_own_cloudfront_distribution( string $caller_reference ) : bool {
+	$normalise = function ( string $url ) : string {
+		return untrailingslashit( strtolower( preg_replace( '#^https?://#i', '', trim( $url ) ) ) );
+	};
+
+	return $normalise( $caller_reference ) === $normalise( site_url() );
 }
 
 function unlink_cloudfront_distribution() {

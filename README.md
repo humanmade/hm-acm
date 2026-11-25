@@ -68,6 +68,14 @@ Because this plugin doesn't provide DNS / Nameserver services (via Route 53) it 
 
 The path forward here is probably to incorperate Route 53 in to this plugin, so instead of providing users with DNS records, we give them nameservers to switch to. This adds the complication of needing to add UI for general DNS management, as users will likely need to now manage things like MX records.
 
+### Copied sites
+
+The plugin stores a site's certificate and CloudFront distribution in that site's options. A tool that copies a site together with its options gives the copy the original site's distribution. Updating the distribution config from the copy would replace the original site's domains and certificate, so the plugin refuses to update a distribution that was created by a different site. It compares the distribution's `CallerReference`, which is set to the creating site's URL and never changes, with the site's URL, ignoring the scheme.
+
+To fix a copied site, unlink the distribution from it (`wp hm-acm delete-cloudfront --include=<site-id>`, which only removes the site's options) and create a new distribution for it.
+
+If a site's URL has changed since its distribution was created, the update is refused as well. To allow it, use the `hm.acm.allow_update_other_site_distribution` filter, which receives the distribution's `CallerReference`.
+
 ## User guide
 
 To do the following you current have to activate the "HM ACM HTTP" plugin on the site.
